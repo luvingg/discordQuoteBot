@@ -1,0 +1,16 @@
+{
+  "name": "quotebot",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.53",
+    "canvas-hypertxt": "^1.0.3",
+    "skia-canvas": "^1.0.1"
+  }
+}
