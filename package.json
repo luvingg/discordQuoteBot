@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.53",
-    "canvas-hypertxt": "^1.0.3",
+    "mitata": "^0.1.11",
     "skia-canvas": "^1.0.1"
   }
 }

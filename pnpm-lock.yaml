@@ -11,9 +11,9 @@ importers:
       '@napi-rs/canvas':
         specifier: ^0.1.53
         version: 0.1.53
-      canvas-hypertxt:
-        specifier: ^1.0.3
-        version: 1.0.3
+      mitata:
+        specifier: ^0.1.11
+        version: 0.1.11
       skia-canvas:
         specifier: ^1.0.1
         version: 1.0.1
@@ -126,9 +126,6 @@ packages:
   bun-types@1.1.17:
     resolution: {integrity: sha512-Z4+OplcSd/YZq7ZsrfD00DKJeCwuNY96a1IDJyR73+cTBaFIS7SC6LhpY/W3AMEXO9iYq5NJ58WAwnwL1p5vKg==}
 
-  canvas-hypertxt@1.0.3:
-    resolution: {integrity: sha512-+VsMpRr64jYgKq2IeFUNel3vCZH/IzS+iXSHxmUV3IUH5dXlC9xHz4AwtPZisDxZ5MWcuK0V+TXgPKFPiZnxzg==}
-
   cargo-cp-artifact@0.1.9:
     resolution: {integrity: sha512-6F+UYzTaGB+awsTXg0uSJA1/b/B3DDJzpKVRu0UmyI7DmNeaAl2RFHuTGIN6fEgpadRxoXGb7gbC1xo4C3IdyA==}
     hasBin: true
@@ -235,6 +232,9 @@ packages:
   minizlib@2.1.2:
     resolution: {integrity: sha512-bAxsR8BVfj60DWXHE3u30oHzfl4G7khkSuPW+qvpd7jFRHm7dLxOjUk1EHACJ/hxLY8phGJ0YhYHZo7jil7Qdg==}
     engines: {node: '>= 8'}
+
+  mitata@0.1.11:
+    resolution: {integrity: sha512-cs6FiWcnRxn7atVumm8wA8R70XCDmMXgVgb/qWUSjr5dwuIBr7zC+22mbGYPlbyFixlIOjuP//A0e72Q1ZoGDw==}
 
   mkdirp@1.0.4:
     resolution: {integrity: sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==}
@@ -458,8 +458,6 @@ snapshots:
       '@types/node': 20.12.14
       '@types/ws': 8.5.11
 
-  canvas-hypertxt@1.0.3: {}
-
   cargo-cp-artifact@0.1.9: {}
 
   chownr@2.0.0: {}
@@ -561,6 +559,8 @@ snapshots:
     dependencies:
       minipass: 3.3.6
       yallist: 4.0.0
+
+  mitata@0.1.11: {}
 
   mkdirp@1.0.4: {}
 
