@@ -1,6 +1,6 @@
 import { heapStats } from "bun:jsc";
 
-import { type CanvasRenderingContext2D } from "skia-canvas";
+import { type CanvasRenderingContext2D, type TextMetrics } from "skia-canvas";
 
 console.log(heapStats().heapSize);
 
@@ -37,7 +37,13 @@ export const generateCharLengths = (
   return lengthsMap;
 };
 
-interface textWrapConfig {
+export const flattenLines = (lines: string[][]) =>
+  lines
+    .map((line) => line.join("\n"))
+    .join("\n")
+    .split("\n");
+
+interface TextWrapConfig {
   text: string;
   maxWidth: number;
   ctx: CanvasRenderingContext2D;
@@ -47,7 +53,7 @@ interface textWrapConfig {
   updateCache?: boolean;
 }
 
-export const textWrap = (config: textWrapConfig): string[][] => {
+export const textWrap = (config: TextWrapConfig): string[][] => {
   const { ctx } = config;
 
   const charCacheLookup = (char: string): number => {
@@ -114,7 +120,7 @@ export const textWrap = (config: textWrapConfig): string[][] => {
   return final;
 };
 
-interface drawLinesConfig {
+interface DrawLinesConfig {
   lines: string[][];
   ctx: CanvasRenderingContext2D;
   font: string;
@@ -127,11 +133,12 @@ interface drawLinesConfig {
   textBaseline?: CanvasTextBaseline;
 }
 
-type drawLinesParams = Omit<drawLinesConfig, "textBaseline"> & {
+type drawLinesParams = Omit<DrawLinesConfig, "textBaseline"> & {
   textBaseline?: CanvasTextBaseline | "center";
 };
 
 export const drawLines = (params: drawLinesParams): void => {
+  if (params.lines.flat().length === 0) return;
   const defaultSettings: {
     lineHeight: number;
     textAlign: CanvasTextAlign;
@@ -142,7 +149,7 @@ export const drawLines = (params: drawLinesParams): void => {
     textBaseline: "top",
   };
 
-  const config: Required<drawLinesConfig> = {
+  const config: Required<DrawLinesConfig> = {
     ...defaultSettings,
     ...params,
     textBaseline: params.textBaseline
@@ -169,10 +176,7 @@ export const drawLines = (params: drawLinesParams): void => {
 
   const lineMeasurements = params.ctx.measureText("M");
 
-  const flattenedLines: string[] = config.lines
-    .map((line) => line.join("\n"))
-    .join("\n")
-    .split("\n");
+  const flattenedLines: string[] = flattenLines(config.lines);
 
   console.log(flattenedLines);
 
@@ -182,12 +186,16 @@ export const drawLines = (params: drawLinesParams): void => {
   const emAscent = lineMeasurements.emHeightAscent * multiplier;
   const emDescent = lineMeasurements.emHeightDescent * multiplier;
 
-  console.log(multiplier);
+  console.log(multiplier, emAscent, emDescent);
 
   if (params.textBaseline === "center") {
-    let pre = emDescent;
-    let post = (flattenedLines.length - 1) * (emAscent + emDescent);
-    const textHeight = (pre + post) * config.lineHeight;
+    const textHeight = getTextHeight({
+      lines: flattenedLines.length,
+      ctx: config.ctx,
+      font: config.font,
+      fontSize: config.fontSize,
+      lineHeight: config.lineHeight,
+    });
     currentY -= textHeight / 2;
     console.log(textHeight, currentY);
   }
@@ -206,4 +214,107 @@ export const drawLines = (params: drawLinesParams): void => {
     // @ts-ignore - Tried using keyof Omit<CanvasContext2d, "canvas"> but it didn't work cuz any can't be assigned to never
     params.ctx[key] = oldCtx[key];
   }
+};
+interface TextHeightConfig {
+  lines: number;
+  ctx: CanvasRenderingContext2D;
+  font: string;
+  fontSize: number;
+  lineHeight: number;
+}
+
+const emCorrector = (measurements: TextMetrics, fontSize: number) => {
+  const actualLineHeight =
+    measurements.emHeightAscent + measurements.emHeightDescent;
+  const correctionMultiplier = fontSize / actualLineHeight;
+
+  const correctAscent = measurements.emHeightAscent * correctionMultiplier;
+  const correctDescent = measurements.emHeightDescent * correctionMultiplier;
+
+  return {
+    multiplier: correctionMultiplier,
+    ascent: correctAscent,
+    descent: correctDescent,
+  };
+};
+
+export const getTextHeight = (config: TextHeightConfig): number => {
+  if (config.lineHeight === 0) return 0;
+  const { ctx } = config;
+
+  const oldFont = ctx.font;
+  ctx.font = `${config.fontSize}px ${config.font}`;
+
+  const lineMeasurement = ctx.measureText("M");
+
+  const { ascent, descent } = emCorrector(lineMeasurement, config.fontSize);
+
+  ctx.font = oldFont;
+
+  return config.lineHeight * (ascent + descent) * config.lines;
+};
+
+interface TruncateTextConfig {
+  paragraphs: string[][];
+  ctx: CanvasRenderingContext2D;
+  font: string;
+  fontSize: number;
+  lineHeight: number;
+  maxHeight: number;
+  ellipsis?: string;
+}
+export const truncateText = (config: TruncateTextConfig): string[][] => {
+  const { ctx } = config;
+
+  const oldFont = ctx.font;
+  ctx.font = `${config.fontSize}px ${config.font}`;
+
+  // you could just loop until we hit or via a binary method but math is always faster
+  const lineMeasurement = ctx.measureText("M");
+
+  ctx.font = oldFont;
+
+  const { ascent, descent } = emCorrector(lineMeasurement, config.fontSize);
+
+  // height = (ascent + descent) * lines - ascent
+  // lines = (height + ascent) / (ascent + descent)
+  const num = config.maxHeight;
+  const dem = config.lineHeight * (ascent + descent);
+  const maxLines = Math.floor(num / dem);
+
+  const flatLines = flattenLines(config.paragraphs);
+
+  if (maxLines >= flatLines.length) return config.paragraphs;
+
+  const lineCount = config.paragraphs.map((paragraph) => paragraph.length);
+
+  let parargraphs: string[][] = [];
+  let lines = 0;
+
+  for (let i = 0; i < config.paragraphs.length; i++) {
+    if (lines === maxLines) break;
+    const count = lineCount[i];
+    const paragraph = config.paragraphs[i];
+    if (lines + count <= maxLines) {
+      // add whole paragraph
+      parargraphs.push(paragraph);
+      lines += count;
+      continue;
+    }
+    // add partial paragraph
+    const remainingLines = maxLines - lines;
+    const trimmedParagraph = paragraph.slice(0, remainingLines);
+    parargraphs.push(trimmedParagraph);
+  }
+
+  if (config.ellipsis) {
+    const lastParagraph = parargraphs.at(-1)!;
+    lastParagraph[lastParagraph.length - 1] =
+      lastParagraph[lastParagraph.length - 1].slice(
+        0,
+        -config.ellipsis.length
+      ) + config.ellipsis;
+  }
+
+  return parargraphs;
 };
