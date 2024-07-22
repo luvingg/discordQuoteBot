@@ -1,10 +1,10 @@
 import { heapStats } from "bun:jsc";
 
-import { Canvas as Canvas, type CanvasRenderingContext2D } from "skia-canvas";
+import { type CanvasRenderingContext2D } from "skia-canvas";
 
 console.log(heapStats().heapSize);
 
-const generateCharLengths = (
+export const generateCharLengths = (
   ctx: CanvasRenderingContext2D,
   font: string,
   fontSize: number,
@@ -37,34 +37,38 @@ const generateCharLengths = (
   return lengthsMap;
 };
 
-const canvasSplit = (
-  text: string,
-  maxWidth: number,
-  ctx: CanvasRenderingContext2D,
-  font: string,
-  fontSize: number,
-  charLengthCache: Map<string, number> | undefined = undefined,
-  saveNewValues: boolean = true
-): string[][] => {
+interface textWrapConfig {
+  text: string;
+  maxWidth: number;
+  ctx: CanvasRenderingContext2D;
+  font: string;
+  fontSize: number;
+  cache?: Map<string, number>;
+  updateCache?: boolean;
+}
+
+export const textWrap = (config: textWrapConfig): string[][] => {
+  const { ctx } = config;
+
   const charCacheLookup = (char: string): number => {
-    if (charLengthCache?.has(char)) {
-      return charLengthCache.get(char)!;
+    if (config.cache?.has(char)) {
+      return config.cache.get(char)!;
     }
 
     const width = ctx.measureText(char).width;
-    if (saveNewValues) {
-      charLengthCache?.set(char, width);
+    if (config.updateCache === undefined || config.updateCache) {
+      config.cache?.set(char, width);
     }
     return width;
   };
 
   const oldFont: string = ctx.font;
-  ctx.font = `${fontSize}px ${font}`;
+  ctx.font = `${config.fontSize}px ${config.font}`;
 
   const spaceWidth = charCacheLookup(" ");
 
   const final: string[][] = [];
-  const paragraphs: string[] = text.split("\n");
+  const paragraphs: string[] = config.text.split("\n");
 
   for (let i = 0; i < paragraphs.length; i++) {
     const paragraph: string = paragraphs[i];
@@ -89,9 +93,9 @@ const canvasSplit = (
 
       const futureWidth: number = lineWidth + addedWidth;
 
-      if (futureWidth > maxWidth) {
+      if (futureWidth > config.maxWidth) {
         // dc current line
-        let check = !(ctx.measureText(line).width > maxWidth);
+        let check = !(ctx.measureText(line).width > config.maxWidth);
         if (!check) {
           line = line.split(" ").slice(0, -1).join(" ");
         }
@@ -123,11 +127,11 @@ interface drawLinesConfig {
   textBaseline?: CanvasTextBaseline;
 }
 
-export type drawLinesParams = Omit<drawLinesConfig, "textBaseline"> & {
+type drawLinesParams = Omit<drawLinesConfig, "textBaseline"> & {
   textBaseline?: CanvasTextBaseline | "center";
 };
 
-const drawLines = (params: drawLinesParams): void => {
+export const drawLines = (params: drawLinesParams): void => {
   const defaultSettings: {
     lineHeight: number;
     textAlign: CanvasTextAlign;
@@ -192,7 +196,7 @@ const drawLines = (params: drawLinesParams): void => {
     if (i !== 0) {
       currentY += emAscent * config.lineHeight;
     }
-    params.ctx.fillText(flattenedLines[i], 0, currentY);
+    params.ctx.fillText(flattenedLines[i], config.x, currentY);
     currentY += emDescent * config.lineHeight;
   }
 
@@ -203,34 +207,3 @@ const drawLines = (params: drawLinesParams): void => {
     params.ctx[key] = oldCtx[key];
   }
 };
-
-const canvas = new Canvas(2000, 2000);
-const ctx = canvas.getContext("2d");
-
-{
-  ctx.scale(10, 10);
-
-  // setup canvas
-  ctx.fillStyle = "white";
-  ctx.fillRect(0, 0, 100, canvas.height);
-}
-const text =
-  "Hello, this is a test of the emergency broadcast system. This is only a test.";
-
-const charLengthCache = generateCharLengths(ctx, "Noto Sans", 16);
-
-const lines = canvasSplit(text, 100, ctx, "Noto Sans", 16, charLengthCache);
-
-drawLines({
-  lines,
-  ctx,
-  font: "Noto Sans",
-  fontSize: 16,
-  fontColor: "red",
-  x: 0,
-  y: 100,
-  lineHeight: 1.5,
-  textBaseline: "center",
-});
-
-canvas.saveAsSync("split.png");
