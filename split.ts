@@ -110,7 +110,7 @@ const canvasSplit = (
   return final;
 };
 
-interface drawLinesParams {
+interface drawLinesConfig {
   lines: string[][];
   ctx: CanvasRenderingContext2D;
   font: string;
@@ -123,6 +123,10 @@ interface drawLinesParams {
   textBaseline?: CanvasTextBaseline;
 }
 
+export type drawLinesParams = Omit<drawLinesConfig, "textBaseline"> & {
+  textBaseline?: CanvasTextBaseline | "center";
+};
+
 const drawLines = (params: drawLinesParams): void => {
   const defaultSettings: {
     lineHeight: number;
@@ -131,10 +135,18 @@ const drawLines = (params: drawLinesParams): void => {
   } = {
     lineHeight: 1.5,
     textAlign: "left",
-    textBaseline: "alphabetic",
+    textBaseline: "top",
   };
 
-  const settings: Required<drawLinesParams> = { ...defaultSettings, ...params };
+  const config: Required<drawLinesConfig> = {
+    ...defaultSettings,
+    ...params,
+    textBaseline: params.textBaseline
+      ? params.textBaseline !== "center"
+        ? params.textBaseline
+        : "middle"
+      : defaultSettings.textBaseline,
+  };
 
   const oldCtx = {
     font: params.ctx.font,
@@ -144,34 +156,44 @@ const drawLines = (params: drawLinesParams): void => {
   };
 
   // set new ctx values
-  params.ctx.font = `${settings.fontSize}px ${settings.font}`;
-  params.ctx.fillStyle = settings.fontColor;
-  params.ctx.textAlign = settings.textAlign;
-  params.ctx.textBaseline = settings.textBaseline;
+  params.ctx.font = `${config.fontSize}px ${config.font}`;
+  params.ctx.fillStyle = config.fontColor;
+  params.ctx.textAlign = config.textAlign;
+  params.ctx.textBaseline = config.textBaseline;
 
-  let currentY: number = settings.y;
+  let currentY: number = config.y;
 
-  const lineMeasurements: any = params.ctx.measureText("M");
+  const lineMeasurements = params.ctx.measureText("M");
 
-  const flattenedLines: string[] = settings.lines
+  const flattenedLines: string[] = config.lines
     .map((line) => line.join("\n"))
     .join("\n")
     .split("\n");
 
   console.log(flattenedLines);
 
-  console.log(lineMeasurements.emHeightAscent);
-  console.log(lineMeasurements.emHeightDescent);
+  const multiplier =
+    config.fontSize /
+    (lineMeasurements.emHeightAscent + lineMeasurements.emHeightDescent);
+  const emAscent = lineMeasurements.emHeightAscent * multiplier;
+  const emDescent = lineMeasurements.emHeightDescent * multiplier;
+
+  console.log(multiplier);
+
+  if (params.textBaseline === "center") {
+    let pre = emDescent;
+    let post = (flattenedLines.length - 1) * (emAscent + emDescent);
+    const textHeight = (pre + post) * config.lineHeight;
+    currentY -= textHeight / 2;
+    console.log(textHeight, currentY);
+  }
 
   for (let i = 0; i < flattenedLines.length; i++) {
-    if (i === 0) {
-      currentY += lineMeasurements.emHeightAscent + settings.lineHeight * 8 - 6;
-      currentY -= lineMeasurements.alphabeticBaseline / 2;
-    } else {
-      currentY += lineMeasurements.emHeightAscent * settings.lineHeight;
+    if (i !== 0) {
+      currentY += emAscent * config.lineHeight;
     }
     params.ctx.fillText(flattenedLines[i], 0, currentY);
-    // currentY += lineMeasurements.emHeightDescent * settings.lineHeight;
+    currentY += emDescent * config.lineHeight;
   }
 
   // loop through oldCtx and restore
@@ -206,8 +228,9 @@ drawLines({
   fontSize: 16,
   fontColor: "red",
   x: 0,
-  y: 0,
-  lineHeight: 1,
+  y: 100,
+  lineHeight: 1.5,
+  textBaseline: "center",
 });
 
 canvas.saveAsSync("split.png");
