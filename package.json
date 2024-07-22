@@ -9,8 +9,6 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^0.1.53",
-    "canvas": "3.0.0-rc2",
     "mitata": "^0.1.11",
     "skia-canvas": "^1.0.1"
   }

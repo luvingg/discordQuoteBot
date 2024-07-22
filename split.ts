@@ -1,27 +1,11 @@
 import { heapStats } from "bun:jsc";
 
-import { Canvas, type SKRSContext2D } from "@napi-rs/canvas";
-import {
-  Canvas as SkiaCanvas,
-  type CanvasRenderingContext2D as CRC2d,
-} from "skia-canvas";
-import {
-  Canvas as NodeCanvas,
-  CanvasRenderingContext2D as NodeContext,
-} from "canvas";
-
-// type CanvasContext2d = SKRSContext2D | CanvasRenderingContext2D;
-// type CanvasContext2d = CRC2d | CanvasRenderingContext2D;
-type CanvasContext2d =
-  | SKRSContext2D
-  | CRC2d
-  | NodeContext
-  | CanvasRenderingContext2D;
+import { Canvas as Canvas, type CanvasRenderingContext2D } from "skia-canvas";
 
 console.log(heapStats().heapSize);
 
 const generateCharLengths = (
-  ctx: CanvasContext2d,
+  ctx: CanvasRenderingContext2D,
   font: string,
   fontSize: number,
   cache: Map<string, Map<string, number>> | undefined = undefined,
@@ -56,7 +40,7 @@ const generateCharLengths = (
 const canvasSplit = (
   text: string,
   maxWidth: number,
-  ctx: CanvasContext2d,
+  ctx: CanvasRenderingContext2D,
   font: string,
   fontSize: number,
   charLengthCache: Map<string, number> | undefined = undefined,
@@ -106,9 +90,14 @@ const canvasSplit = (
       const futureWidth: number = lineWidth + addedWidth;
 
       if (futureWidth > maxWidth) {
+        // dc current line
+        let check = !(ctx.measureText(line).width > maxWidth);
+        if (!check) {
+          line = line.split(" ").slice(0, -1).join(" ");
+        }
         lines.push(line);
-        line = "";
-        lineWidth = 0;
+        line = check ? "" : words[j] + " ";
+        lineWidth = check ? 0 : currentWidth + spaceWidth;
       } else {
         line += " ";
         lineWidth += spaceWidth;
@@ -123,7 +112,7 @@ const canvasSplit = (
 
 interface drawLinesParams {
   lines: string[][];
-  ctx: CanvasContext2d;
+  ctx: CanvasRenderingContext2D;
   font: string;
   fontSize: number;
   fontColor: string;
@@ -171,7 +160,8 @@ const drawLines = (params: drawLinesParams): void => {
 
   console.log(flattenedLines);
 
-  console.log(lineMeasurements);
+  console.log(lineMeasurements.emHeightAscent);
+  console.log(lineMeasurements.emHeightDescent);
 
   for (let i = 0; i < flattenedLines.length; i++) {
     if (i === 0) {
@@ -181,7 +171,7 @@ const drawLines = (params: drawLinesParams): void => {
       currentY += lineMeasurements.emHeightAscent * settings.lineHeight;
     }
     params.ctx.fillText(flattenedLines[i], 0, currentY);
-    currentY += lineMeasurements.emHeightDescent * settings.lineHeight;
+    // currentY += lineMeasurements.emHeightDescent * settings.lineHeight;
   }
 
   // loop through oldCtx and restore
@@ -195,56 +185,19 @@ const drawLines = (params: drawLinesParams): void => {
 const canvas = new Canvas(2000, 2000);
 const ctx = canvas.getContext("2d");
 
-const skiaCanvas = new SkiaCanvas(2000, 2000);
-const skiaCtx = skiaCanvas.getContext("2d");
-
-const nodeCanvas = new NodeCanvas(2000, 2000);
-const nodeCtx = nodeCanvas.getContext("2d");
-
 {
   ctx.scale(10, 10);
-  skiaCtx.scale(10, 10);
-  nodeCtx.scale(10, 10);
 
   // setup canvas
   ctx.fillStyle = "white";
-  skiaCtx.fillStyle = "white";
-  nodeCtx.fillStyle = "white";
-
   ctx.fillRect(0, 0, 100, canvas.height);
-  skiaCtx.fillRect(0, 0, 100, canvas.height);
-  nodeCtx.fillRect(0, 0, 100, canvas.height);
 }
+const text =
+  "Hello, this is a test of the emergency broadcast system. This is only a test.";
 
 const charLengthCache = generateCharLengths(ctx, "Noto Sans", 16);
-const lines = canvasSplit(
-  "Hello, this is a test of the emergency broadcast system. This is only a test.",
-  100,
-  ctx,
-  "Noto Sans",
-  16,
-  charLengthCache
-);
 
-const skiaCache = generateCharLengths(skiaCtx, "Noto Sans", 16);
-const skiaLines = canvasSplit(
-  "Hello, this is a test of the emergency broadcast system. This is only a test.",
-  100,
-  skiaCtx,
-  "Noto Sans",
-  16,
-  skiaCache
-);
-
-const nodeCache = generateCharLengths(nodeCtx, "Noto Sans", 16);
-const nodeLines = canvasSplit(
-  "Hello, this is a test of the emergency broadcast system. This is only a test.",
-  100,
-  nodeCtx,
-  "Noto Sans",
-  16,
-  nodeCache
-);
+const lines = canvasSplit(text, 100, ctx, "Noto Sans", 16, charLengthCache);
 
 drawLines({
   lines,
@@ -256,31 +209,5 @@ drawLines({
   y: 0,
   lineHeight: 1,
 });
-drawLines({
-  lines: skiaLines,
-  ctx: skiaCtx,
-  font: "Noto Sans",
-  fontSize: 16,
-  fontColor: "red",
-  x: 0,
-  y: 0,
-  lineHeight: 1,
-  textBaseline: "alphabetic",
-});
-drawLines({
-  lines: nodeLines,
-  ctx: nodeCtx,
-  font: "Noto Sans",
-  fontSize: 16,
-  fontColor: "red",
-  x: 0,
-  y: 0,
-  lineHeight: 1,
-});
 
-// save
-const buffer = canvas.toBuffer("image/png");
-Bun.write("split.png", buffer.buffer);
-skiaCanvas.saveAsSync("split2.png");
-const bufferNode = nodeCanvas.toBuffer("image/png");
-Bun.write("split3.png", bufferNode.buffer);
+canvas.saveAsSync("split.png");
