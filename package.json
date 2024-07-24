@@ -9,6 +9,9 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.53",
+    "colorjs.io": "^0.5.2",
+    "discord.js": "^14.15.3",
     "mitata": "^0.1.11",
     "skia-canvas": "^1.0.1"
   }

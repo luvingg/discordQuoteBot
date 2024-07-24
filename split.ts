@@ -1,8 +1,13 @@
 import { heapStats } from "bun:jsc";
 
-import { type CanvasRenderingContext2D, type TextMetrics } from "skia-canvas";
+import {
+  type CanvasRenderingContext2D as SkiaContext2D,
+  type TextMetrics,
+} from "skia-canvas";
 
-console.log(heapStats().heapSize);
+// console.log(heapStats().heapSize);
+
+type CanvasRenderingContext2D = SkiaContext2D;
 
 export const generateCharLengths = (
   ctx: CanvasRenderingContext2D,
@@ -178,7 +183,7 @@ export const drawLines = (params: drawLinesParams): void => {
 
   const flattenedLines: string[] = flattenLines(config.lines);
 
-  console.log(flattenedLines);
+  // console.log(flattenedLines);
 
   const multiplier =
     config.fontSize /
@@ -186,7 +191,7 @@ export const drawLines = (params: drawLinesParams): void => {
   const emAscent = lineMeasurements.emHeightAscent * multiplier;
   const emDescent = lineMeasurements.emHeightDescent * multiplier;
 
-  console.log(multiplier, emAscent, emDescent);
+  // console.log(multiplier, emAscent, emDescent);
 
   if (params.textBaseline === "center") {
     const textHeight = getTextHeight({
@@ -197,7 +202,7 @@ export const drawLines = (params: drawLinesParams): void => {
       lineHeight: config.lineHeight,
     });
     currentY -= textHeight / 2;
-    console.log(textHeight, currentY);
+    // console.log(textHeight, currentY);
   }
 
   for (let i = 0; i < flattenedLines.length; i++) {
