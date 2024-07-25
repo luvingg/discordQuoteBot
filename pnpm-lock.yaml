@@ -17,12 +17,18 @@ importers:
       discord.js:
         specifier: ^14.15.3
         version: 14.15.3
+      markdown-to-text:
+        specifier: ^0.1.1
+        version: 0.1.1
       mitata:
         specifier: ^0.1.11
         version: 0.1.11
       skia-canvas:
         specifier: ^1.0.1
         version: 1.0.1
+      strip-markdown:
+        specifier: ^6.0.0
+        version: 6.0.0
       typescript:
         specifier: ^5.0.0
         version: 5.5.3
@@ -138,8 +144,20 @@ packages:
   '@types/bun@1.1.6':
     resolution: {integrity: sha512-uJgKjTdX0GkWEHZzQzFsJkWp5+43ZS7HC8sZPFnOwnSo1AsNl2q9o2bFeS23disNDqbggEgyFkKCHl/w8iZsMA==}
 
+  '@types/chai@4.3.16':
+    resolution: {integrity: sha512-PatH4iOdyh3MyWtmHVFXLWCCIhUbopaltqddG9BzB+gMIzee2MJrvd+jouii9Z3wzQJruGWAm7WOMjgfG8hQlQ==}
+
+  '@types/mdast@4.0.4':
+    resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
+
+  '@types/mocha@8.2.3':
+    resolution: {integrity: sha512-ekGvFhFgrc2zYQoX4JeZPmVzZxw6Dtllga7iGHzfbYIYkAMUx/sAFP2GdFpLff+vdHXu5fl7WX9AT+TtqYcsyw==}
+
   '@types/node@20.12.14':
     resolution: {integrity: sha512-scnD59RpYD91xngrQQLGkE+6UrHUPzeKZWhhjBSa3HSkwjbQc38+q3RoIVEwxQGRw3M+j5hpNAM+lgV3cVormg==}
+
+  '@types/unist@3.0.2':
+    resolution: {integrity: sha512-dqId9J8K/vGi5Zr7oo212BGii5m3q5Hxlkwy3WpYuKPklmBEvsbMYYyLxAQpSffdLl/gdW0XUpKWFvYmyoWCoQ==}
 
   '@types/ws@8.5.11':
     resolution: {integrity: sha512-4+q7P5h3SpJxaBft0Dzpbr6lmMaqh0Jr2tbhJZ/luAwvD7ohSCniYkwz/pLxuT2h0EOa6QADgJj1Ko+TzRfZ+w==}
@@ -285,6 +303,9 @@ packages:
     resolution: {integrity: sha512-g3FeP20LNwhALb/6Cz6Dd4F2ngze0jz7tbzrD2wAV+o9FeNHe4rL+yK2md0J/fiSf1sa1ADhXqi5+oVwOM/eGw==}
     engines: {node: '>=8'}
 
+  markdown-to-text@0.1.1:
+    resolution: {integrity: sha512-co/J5l8mJ2RK9wD/nQRGwO7JxoeyfvVNtOZll016EdAX2qYkwCWMdtYvJO42b41Ho7GFEJMuly9llf0Nj+ReQw==}
+
   mimic-response@3.1.0:
     resolution: {integrity: sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==}
     engines: {node: '>=10'}
@@ -403,6 +424,9 @@ packages:
   strip-ansi@6.0.1:
     resolution: {integrity: sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==}
     engines: {node: '>=8'}
+
+  strip-markdown@6.0.0:
+    resolution: {integrity: sha512-mSa8FtUoX3ExJYDkjPUTC14xaBAn4Ik5GPQD45G5E2egAmeV3kHgVSTfIoSDggbF6Pk9stahVgqsLCNExv6jHw==}
 
   tar@6.2.1:
     resolution: {integrity: sha512-DZ4yORTwrbTj/7MZYq2w+/ZFdI6OZ/f9SFHR+71gIVUZhOQPHzVCLpvRnPgyaMpfWxxk/4ONva3GQSyNIKRv6A==}
@@ -575,9 +599,19 @@ snapshots:
     dependencies:
       bun-types: 1.1.17
 
+  '@types/chai@4.3.16': {}
+
+  '@types/mdast@4.0.4':
+    dependencies:
+      '@types/unist': 3.0.2
+
+  '@types/mocha@8.2.3': {}
+
   '@types/node@20.12.14':
     dependencies:
       undici-types: 5.26.5
+
+  '@types/unist@3.0.2': {}
 
   '@types/ws@8.5.11':
     dependencies:
@@ -729,6 +763,11 @@ snapshots:
     dependencies:
       semver: 6.3.1
 
+  markdown-to-text@0.1.1:
+    dependencies:
+      '@types/chai': 4.3.16
+      '@types/mocha': 8.2.3
+
   mimic-response@3.1.0: {}
 
   minimatch@3.1.2:
@@ -840,6 +879,10 @@ snapshots:
   strip-ansi@6.0.1:
     dependencies:
       ansi-regex: 5.0.1
+
+  strip-markdown@6.0.0:
+    dependencies:
+      '@types/mdast': 4.0.4
 
   tar@6.2.1:
     dependencies:

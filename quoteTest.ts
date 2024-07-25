@@ -1,11 +1,12 @@
 import { heapSize } from "bun:jsc";
 
 import {
+  DEFAULT_CONFIG,
   Origin,
   QuoteGenerator,
   type PreQuoteData,
   type QuoteConfig,
-} from "./quote copy";
+} from "./quote";
 import Color from "colorjs.io";
 
 Bun.sleepSync(2000);
@@ -26,39 +27,14 @@ const data: PreQuoteData = {
   username: "@ArchWiki",
 };
 
-const defaultConfig: QuoteConfig = {
-  avatarOrigin: Origin.LEFT,
-  filters: [],
-  fontColor: new Color("#fff"),
-  fontFamily: "Noto Sans",
-  fontSize: {
-    max: 50,
-    min: 20,
-    regular: 30,
-  },
-  resolution: {
-    width: 1920,
-    height: 1080,
-  },
-  scale: {
-    x: 2,
-    y: 2,
-  },
-  padding: {
-    x: 30,
-    y: 30,
-  },
-  background: new Color("#000"),
-};
-
-const buffer = quoteGenerator.quote(data, defaultConfig);
+const buffer = quoteGenerator.quote(data, DEFAULT_CONFIG);
 const bufferBuffer = (await buffer).buffer;
 
 const end = Bun.nanoseconds();
 console.log("Total:", (end - start) / 1e6, "ms");
 
 const buffer2 = quoteGenerator.quote(data, {
-  ...defaultConfig,
+  ...DEFAULT_CONFIG,
   avatarOrigin: Origin.TOP,
   resolution: {
     width: 1080,

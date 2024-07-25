@@ -18,8 +18,7 @@ const ctx = canvas.getContext("2d");
   ctx.fillStyle = "white";
   ctx.fillRect(0, 0, 100, canvas.height);
 }
-const text =
-  "Hello, this is a test of the emergency broadcast system. This is only a test.";
+const text = "Pneumonoultramicroscopicsilicovolcanoconiosis";
 
 const charLengthCache = generateCharLengths(ctx, "Noto Sans", 16);
 

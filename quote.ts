@@ -1,5 +1,5 @@
-import { Canvas, Image } from "skia-canvas";
-
+import Color from "colorjs.io";
+import { Canvas, Image, type CanvasRenderingContext2D } from "skia-canvas";
 import {
   drawLines,
   flattenLines,
@@ -9,158 +9,400 @@ import {
   truncateText,
 } from "./split";
 
-interface QuoteConfig {
-  font: string;
-  fontSize: number;
-  fontColor: string;
-  paddingX: number;
-  paddingY: number;
+export enum Origin {
+  LEFT,
+  TOP,
+  RIGHT,
+  BOTTOM,
 }
 
-const defaultConfig: QuoteConfig = {
-  font: "Noto Sans",
-  fontSize: 20,
-  fontColor: "white",
-  paddingX: 50,
-  paddingY: 25,
-};
+export type PreQuoteData = Omit<QuoteData, "avatar"> & { avatar: string };
 
-interface QuoteParams {
-  message: string;
+export interface QuoteData {
+  messageContent: string;
   username: string;
   displayName: string;
-  pfp: string;
+  avatar: Buffer;
 }
+
+export interface QuoteConfig {
+  avatarOrigin: Origin;
+  resolution: {
+    width: number;
+    height: number;
+  };
+  scale: {
+    x: number;
+    y: number;
+  };
+  filters: string[];
+  fontFamily: string;
+  fontSize: {
+    max: number;
+    min: number;
+    regular: number;
+    watermark: number;
+  };
+  theme: {
+    background: Color;
+    textContent: Color;
+    displayName: Color;
+    username: Color;
+    watermark: Color;
+  };
+  padding: {
+    x: number;
+    y: number;
+  };
+  watermark: string;
+}
+
+export const DEFAULT_CONFIG: QuoteConfig = {
+  avatarOrigin: Origin.LEFT,
+  filters: [],
+  theme: {
+    background: new Color("#000"),
+    textContent: new Color("#fff"),
+    displayName: new Color("#ddd"),
+    username: new Color("#777"),
+    watermark: new Color("#777"),
+  },
+  fontFamily: "Noto Sans",
+  fontSize: {
+    max: 50,
+    min: 20,
+    regular: 30,
+    watermark: 20,
+  },
+  resolution: {
+    width: 1920,
+    height: 1080,
+  },
+  scale: {
+    x: 2,
+    y: 2,
+  },
+  padding: {
+    x: 30,
+    y: 30,
+  },
+  watermark: "@ArchWiki",
+};
 
 export class QuoteGenerator {
   public static fontCache: Map<string, Map<string, number>> = new Map();
-  public static pfpCache: Map<string, Buffer> = new Map();
+  public static avatarCache: Map<string, Buffer> = new Map();
+  public canvas = new Canvas(1920, 1080);
 
-  public quoteConfig: QuoteConfig;
+  public async quote(data: PreQuoteData, config: QuoteConfig): Promise<Buffer> {
+    const ctx = this.canvas.getContext("2d");
 
-  constructor(quoteConfig: Partial<QuoteConfig> = {}) {
-    this.quoteConfig = {
-      ...defaultConfig,
-      ...quoteConfig,
+    let avatarBuffer: Buffer;
+
+    if (QuoteGenerator.avatarCache.has(data.avatar)) {
+      avatarBuffer = QuoteGenerator.avatarCache.get(data.avatar)!;
+    } else {
+      const req = await fetch(data.avatar);
+      const arrayBuffer = await req.arrayBuffer();
+      avatarBuffer = Buffer.from(arrayBuffer);
+    }
+
+    const quoteData = {
+      ...data,
+      avatar: avatarBuffer,
     };
+
+    return QuoteGenerator.generate(ctx, quoteData, config);
   }
 
-  public async quote(params: QuoteParams) {
-    // const canvas = new Canvas(1920 / 2, 1080 / 2);
-    const canvas = new Canvas(1920, 1080);
+  public static generate(
+    ctx: CanvasRenderingContext2D,
+    data: QuoteData,
+    config: QuoteConfig
+  ): Buffer {
+    ctx.canvas.width = config.resolution.width;
+    ctx.canvas.height = config.resolution.height;
 
-    const ctx = canvas.getContext("2d");
+    ctx.scale(config.scale.x, config.scale.y);
 
-    const scale = {
-      x: 2,
-      y: 2,
-    };
+    ctx.filter = config.filters.join(" ");
 
-    ctx.scale(scale.x, scale.y);
+    QuoteGenerator.drawAvatar(ctx, data, config);
+    QuoteGenerator.drawGradient(ctx, data, config);
+    QuoteGenerator.drawText(ctx, data, config);
+    QuoteGenerator.drawWatermark(ctx, config);
+
+    ctx.filter = "";
+
+    return ctx.canvas.toBufferSync("jpg", {
+      matte: "red",
+    });
+  }
+
+  public static drawAvatar(
+    ctx: CanvasRenderingContext2D,
+    data: QuoteData,
+    config: QuoteConfig
+  ): void {
+    ctx.save();
 
     const size = {
-      width: canvas.width / scale.x,
-      height: canvas.height / scale.y,
+      width: config.resolution.width / config.scale.x,
+      height: config.resolution.height / config.scale.y,
     };
 
-    const avatarReq = fetch(params.pfp);
-    await avatarReq;
+    const image = new Image();
+    image.src = data.avatar;
 
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-    if (
-      !QuoteGenerator.fontCache.has(
-        `${this.quoteConfig.fontSize}px ${this.quoteConfig.font}`
-      )
-    ) {
-      const cache = generateCharLengths(
-        ctx,
-        this.quoteConfig.font,
-        this.quoteConfig.fontSize,
-        QuoteGenerator.fontCache
-      );
+    // #region clipping mask
+    ctx.beginPath();
+    if (config.avatarOrigin === Origin.TOP) {
+      ctx.rect(0, 0, size.width, size.height / 2);
+    } else if (config.avatarOrigin === Origin.BOTTOM) {
+      ctx.rect(0, size.height / 2, size.width, size.height);
+    } else if (config.avatarOrigin === Origin.LEFT) {
+      ctx.rect(0, 0, size.width / 2, size.height);
+    } else {
+      ctx.rect(size.width / 2, 0, size.width, size.height);
     }
-    const cache = QuoteGenerator.fontCache.get(
-      `${this.quoteConfig.fontSize}px ${this.quoteConfig.font}`
-    )!;
+    ctx.clip();
+    // #endregion
 
-    const displayNameText = [`- ${params.displayName}`];
+    // #region find image size & position
+    let maxHeight: number = size.height;
+    let maxWidth: number = size.width;
+    if (
+      config.avatarOrigin === Origin.TOP ||
+      config.avatarOrigin === Origin.BOTTOM
+    ) {
+      maxHeight /= 2;
+    } else {
+      maxWidth /= 2;
+    }
+
+    const imageSize = Math.max(maxWidth, maxHeight);
+
+    const imageOffset = {
+      x: (maxWidth - imageSize) / 2,
+      y: (maxHeight - imageSize) / 2,
+    };
+
+    const imagePosition = {
+      x: config.avatarOrigin === Origin.RIGHT ? size.width / 2 : 0,
+      y: config.avatarOrigin === Origin.BOTTOM ? size.height / 2 : 0,
+    };
+
+    imagePosition.x += imageOffset.x;
+    imagePosition.y += imageOffset.y;
+    // #endregion
+
+    ctx.drawImage(
+      image,
+      imagePosition.x,
+      imagePosition.y,
+      imageSize,
+      imageSize
+    );
+
+    ctx.restore();
+  }
+
+  public static drawGradient(
+    ctx: CanvasRenderingContext2D,
+    data: QuoteData,
+    config: QuoteConfig
+  ): void {
+    ctx.save();
+
+    const size = {
+      width: config.resolution.width / config.scale.x,
+      height: config.resolution.height / config.scale.y,
+    };
+
+    let origin = {
+      x1: 0,
+      x2: 0,
+      y1: 0,
+      y2: 0,
+    };
+
+    if (config.avatarOrigin === Origin.LEFT) {
+      origin.x2 = size.width / 2;
+    } else if (config.avatarOrigin === Origin.RIGHT) {
+      origin.x1 = size.width;
+      origin.x2 = size.width / 2;
+    } else if (config.avatarOrigin === Origin.TOP) {
+      origin.y2 = size.height / 2;
+    } else {
+      origin.y1 = size.height;
+      origin.y2 = size.height / 2;
+    }
+
+    const gradient = ctx.createLinearGradient(
+      origin.x1,
+      origin.y1,
+      origin.x2,
+      origin.y2
+    );
+
+    const transparent = new Color(config.theme.background);
+    transparent.alpha = 0;
+    gradient.addColorStop(0, transparent.toString({ format: "hex" }));
+    gradient.addColorStop(
+      1,
+      config.theme.background.toString({ format: "hex" })
+    );
+
+    ctx.fillStyle = gradient;
+
+    // console.log(origin);
+    ctx.fillRect(0, 0, size.width, size.height);
+
+    ctx.restore();
+  }
+
+  public static drawText(
+    ctx: CanvasRenderingContext2D,
+    data: QuoteData,
+    config: QuoteConfig
+  ): void {
+    const size = {
+      width: config.resolution.width / config.scale.x,
+      height: config.resolution.height / config.scale.y,
+    };
+    let maxHeight = size.height;
+    let maxWidth = size.width;
+    if (
+      config.avatarOrigin === Origin.TOP ||
+      config.avatarOrigin === Origin.BOTTOM
+    ) {
+      maxHeight /= 2;
+    } else {
+      maxWidth /= 2;
+    }
+    maxHeight -= config.padding.y * 2;
+    maxWidth -= config.padding.x * 2;
+
+    const displayNameText = [data.displayName];
     const displayNameHeight = getTextHeight({
       lines: displayNameText.length,
-      font: this.quoteConfig.font,
-      fontSize: this.quoteConfig.fontSize,
+      font: config.fontFamily,
+      fontSize: config.fontSize.regular,
       lineHeight: 1.5,
       ctx,
     });
 
-    const usernameText = [params.username];
+    const usernameText = [data.username];
     const usernameHeight = getTextHeight({
       lines: usernameText.length,
-      font: this.quoteConfig.font,
-      fontSize: this.quoteConfig.fontSize,
+      font: config.fontFamily,
+      fontSize: config.fontSize.regular,
       lineHeight: 1.5,
       ctx,
     });
 
-    const quoteSpace =
-      size.height -
-      this.quoteConfig.paddingY * 2 -
-      displayNameHeight -
-      usernameHeight;
+    const regularTextHeight = displayNameHeight + usernameHeight;
 
-    const lines = textWrap({
-      text: params.message,
-      ctx,
-      font: this.quoteConfig.font,
-      fontSize: this.quoteConfig.fontSize,
-      maxWidth: 540 - 100,
-      cache,
-    });
+    const remainingSpace = maxHeight - regularTextHeight;
 
-    const truncatedLines = truncateText({
-      paragraphs: lines,
-      ctx,
-      font: this.quoteConfig.font,
-      fontSize: this.quoteConfig.fontSize,
-      lineHeight: 1.5,
-      maxHeight: quoteSpace,
-      ellipsis: "[…]",
-    });
+    let fontSize: number = config.fontSize.max;
+    let lines: string[][] = [[data.messageContent]];
+    let height: number = fontSize * 1.5;
+    while (fontSize) {
+      let fontCache: Map<string, number>;
+      let font = `${fontSize}px ${config.fontFamily}`;
+      if (QuoteGenerator.fontCache.has(font)) {
+        fontCache = QuoteGenerator.fontCache.get(font)!;
+      } else {
+        fontCache = generateCharLengths(
+          ctx,
+          config.fontFamily,
+          fontSize,
+          QuoteGenerator.fontCache
+        );
+      }
 
-    const lineHeight = getTextHeight({
-      lines: flattenLines(truncatedLines).length,
-      font: this.quoteConfig.font,
-      fontSize: this.quoteConfig.fontSize,
-      lineHeight: 1.5,
-      ctx,
-    });
+      lines = textWrap({
+        text: data.messageContent,
+        ctx,
+        font: config.fontFamily,
+        fontSize: fontSize,
+        maxWidth,
+        cache: fontCache,
+      });
+      height = getTextHeight({
+        lines: flattenLines(lines).length,
+        ctx,
+        font: config.fontFamily,
+        fontSize: fontSize,
+        lineHeight: 1.5,
+      });
 
-    const totalHeight = lineHeight + displayNameHeight + usernameHeight;
+      if (height <= remainingSpace) break;
+      if (fontSize === config.fontSize.min) break;
+      fontSize--;
+    }
 
-    const x =
-      size.width / 2 +
-      (size.width / 2 - this.quoteConfig.paddingX * 2) / 2 +
-      this.quoteConfig.paddingX;
+    console.log(fontSize, "px");
+
+    if (fontSize === config.fontSize.min) {
+      lines = truncateText({
+        paragraphs: lines,
+        ctx,
+        font: config.fontFamily,
+        fontSize,
+        lineHeight: 1.5,
+        maxHeight: remainingSpace,
+        ellipsis: "[…]",
+      });
+      height = getTextHeight({
+        lines: flattenLines(lines).length,
+        ctx,
+        font: config.fontFamily,
+        fontSize: fontSize,
+        lineHeight: 1.5,
+      });
+    }
+
+    const totalHeight = height + displayNameHeight + usernameHeight;
+
+    let x = size.width / 2;
+
+    if (config.avatarOrigin === Origin.LEFT) {
+      x += size.width / 4;
+    } else if (config.avatarOrigin === Origin.RIGHT) {
+      x -= size.width / 4;
+    }
+
+    let y = 0;
+    let sectionHeight = size.height;
+
+    if (config.avatarOrigin === Origin.TOP) {
+      y = sectionHeight;
+      sectionHeight /= 2;
+    } else if (config.avatarOrigin === Origin.BOTTOM) {
+      sectionHeight /= 2;
+    }
 
     drawLines({
       lines,
-      x,
-      y: (size.height - totalHeight) / 2,
-      font: this.quoteConfig.font,
-      fontSize: this.quoteConfig.fontSize,
-      fontColor: this.quoteConfig.fontColor,
       ctx,
-      // textBaseline: "center",
+      font: config.fontFamily,
+      fontSize: fontSize,
+      lineHeight: 1.5,
+      fontColor: config.theme.textContent.toString({ format: "hex" }),
+      x,
+      y: (y + sectionHeight - totalHeight) / 2,
       textAlign: "center",
     });
+
     drawLines({
       lines: [[...displayNameText]],
       x,
-      y: (size.height - totalHeight) / 2 + lineHeight,
-      font: this.quoteConfig.font,
-      fontSize: this.quoteConfig.fontSize,
-      fontColor: "#ddd",
+      y: (y + sectionHeight - totalHeight) / 2 + height,
+      font: config.fontFamily,
+      fontSize: config.fontSize.regular,
+      fontColor: config.theme.displayName.toString({ format: "hex" }),
       ctx,
       // textBaseline: "center",
       textAlign: "center",
@@ -168,58 +410,48 @@ export class QuoteGenerator {
     drawLines({
       lines: [[...usernameText]],
       x,
-      y: (size.height - totalHeight) / 2 + lineHeight + displayNameHeight,
-      font: this.quoteConfig.font,
-      fontSize: this.quoteConfig.fontSize,
-      fontColor: "#777",
+      y: (y + sectionHeight - totalHeight) / 2 + height + displayNameHeight,
+      font: config.fontFamily,
+      fontSize: config.fontSize.regular,
+      fontColor: config.theme.username.toString({ format: "hex" }),
       ctx,
       // textBaseline: "center",
       textAlign: "center",
     });
+  }
 
-    ctx.fillStyle = "#777";
-    ctx.font = `16px ${this.quoteConfig.font}`;
-
-    ctx.textAlign = "right";
-    ctx.textBaseline = "bottom";
-
-    ctx.fillText("@Kurokawa#6528", size.width - 5, size.height - 5);
-
-    const buffer = Buffer.from(
-      await avatarReq.then((res) => res.arrayBuffer())
-    );
-
-    const img = new Image();
-
-    img.src = buffer;
-
-    const avatarSize = Math.max(size.width / 2, size.height);
+  public static drawWatermark(
+    ctx: CanvasRenderingContext2D,
+    config: QuoteConfig
+  ): void {
+    const size = {
+      width: config.resolution.width / config.scale.x,
+      height: config.resolution.height / config.scale.y,
+    };
 
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, size.width / 2, size.height);
-    ctx.clip();
 
-    ctx.drawImage(
-      img,
-      (size.width / 2 - avatarSize) / 2,
-      0,
-      avatarSize,
-      avatarSize
-    );
+    ctx.font = `${config.fontSize.watermark}px ${config.fontFamily}`;
+    ctx.textBaseline = "bottom";
+    ctx.textAlign = "right";
+    ctx.fillStyle = config.theme.watermark;
+
+    let x = size.width;
+    let y = size.height;
+
+    console.log("ORIGIN", config.avatarOrigin);
+
+    if (config.avatarOrigin === Origin.RIGHT) {
+      ctx.textAlign = "left";
+      x = 0;
+    }
+    if (config.avatarOrigin === Origin.BOTTOM) {
+      ctx.textBaseline = "top";
+      y = 0;
+    }
+
+    ctx.fillText(config.watermark, x, y);
 
     ctx.restore();
-
-    const gradient = ctx.createLinearGradient(0, 0, size.width / 2, 0);
-    gradient.addColorStop(0, "rgba(0,0,0,0)");
-    gradient.addColorStop(1, "rgba(0,0,0,1)");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, size.width / 2, size.height);
-
-    const exportBuffer = await canvas.toBuffer("jpg", {
-      quality: 1.0,
-    });
-
-    return exportBuffer;
   }
 }
