@@ -139,5 +139,5 @@ ctx.lineTo(width, 240);
 console.log((Bun.nanoseconds() - start) / 1e6, "ms");
 
 const save = Bun.nanoseconds();
-canvas.saveAsSync("output.png");
+canvas.saveAsSync("output.jpg");
 console.log("save:", (Bun.nanoseconds() - save) / 1e6, "ms");

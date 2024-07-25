@@ -213,7 +213,7 @@ client.on("messageCreate", async (message) => {
     files: [
       {
         attachment: quoteBuffer,
-        name: "newName.png",
+        name: "newName.jpg",
       },
     ],
     components: [row],
@@ -270,7 +270,7 @@ client.on("messageCreate", async (message) => {
       files: [
         {
           attachment: quoteBuffer,
-          name: "newName.png",
+          name: "newName.jpg",
         },
       ],
     });

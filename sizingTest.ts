@@ -78,4 +78,4 @@ for (;;) {
     fontSize--;
   }
 }
-canvas.saveAsSync("sizing.png");
+canvas.saveAsSync("sizing.jpg");

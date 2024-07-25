@@ -69,4 +69,4 @@ drawLines({
   lineHeight: 1.25,
 });
 
-canvas.saveAsSync("split.png");
+canvas.saveAsSync("split.jpg");
