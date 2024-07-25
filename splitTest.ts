@@ -18,7 +18,8 @@ const ctx = canvas.getContext("2d");
   ctx.fillStyle = "white";
   ctx.fillRect(0, 0, 100, canvas.height);
 }
-const text = "Pneumonoultramicroscopicsilicovolcanoconiosis";
+const text = `Para 1: This is a reallyfuckinglongword lmfao.
+This is paragraph 2.`;
 
 const charLengthCache = generateCharLengths(ctx, "Noto Sans", 16);
 
@@ -32,7 +33,7 @@ const lines = textWrap({
 });
 
 ctx.fillStyle = "lightgrey";
-ctx.fillRect(0, 0, 100, 100);
+ctx.fillRect(0, 0, 100, 150);
 
 ctx.textBaseline = "top";
 const trimmed = truncateText({
@@ -41,7 +42,7 @@ const trimmed = truncateText({
   font: "Noto Sans",
   fontSize: 16,
   lineHeight: 1.25,
-  maxHeight: 100,
+  maxHeight: 150,
   ellipsis: "[…]",
 });
 

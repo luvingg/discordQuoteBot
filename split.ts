@@ -62,6 +62,11 @@ export const textWrap = (config: TextWrapConfig): string[][] => {
   const { ctx } = config;
 
   const charCacheLookup = (char: string): number => {
+    if (char.length > 2) {
+      // cuz fucking two bit fuckers
+      throw new Error("only chars, not fucking strings");
+    }
+
     if (config.cache?.has(char)) {
       return config.cache.get(char)!;
     }
@@ -77,6 +82,7 @@ export const textWrap = (config: TextWrapConfig): string[][] => {
   ctx.font = `${config.fontSize}px ${config.font}`;
 
   const spaceWidth = charCacheLookup(" ");
+  const hypenWidth = charCacheLookup("-");
 
   const final: string[][] = [];
   const paragraphs: string[] = config.text.split("\n");
@@ -86,38 +92,53 @@ export const textWrap = (config: TextWrapConfig): string[][] => {
     const words: string[] = paragraph.split(" ");
     const lines: string[] = [];
     let line: string = "";
-    let lineWidth: number = 0;
+    let lineLength: number = 0;
     for (let j = 0; j < words.length; j++) {
-      line += words[j];
+      const currentWord = words[j];
+      const currentChars = [...currentWord];
+      const currentLengths = currentChars.map((character) =>
+        charCacheLookup(character)
+      );
+      const currentLength = currentLengths.reduce((a, c) => a + c, 0);
 
-      const currentWidth: number = charCacheLookup(words[j]);
-      lineWidth += currentWidth;
+      let newWord = "";
+      let newLength = 0;
+      let afterWord = "";
+      for (let k = 0; k < currentChars.length; k++) {
+        const char = currentChars[k];
+        const charLength = currentLengths[k];
 
-      const nextWord: string = words[j + 1];
-      if (!nextWord) {
-        lines.push(line);
-        break;
+        if (
+          lineLength + newLength + charLength + hypenWidth >=
+          config.maxWidth
+        ) {
+          if (currentLength < config.maxWidth / 3) {
+            newWord = "";
+            newLength = 0;
+            afterWord = currentWord;
+            break;
+          }
+          newWord += "-";
+          newLength += hypenWidth;
+          afterWord = currentChars.slice(k).join("");
+          break;
+        }
+        newWord += char;
+        newLength += charLength;
       }
 
-      const nextWidth: number = charCacheLookup(nextWord);
-      const addedWidth: number = spaceWidth + nextWidth;
+      line += newWord + " ";
+      lineLength += newLength + spaceWidth;
 
-      const futureWidth: number = lineWidth + addedWidth;
-
-      if (futureWidth > config.maxWidth) {
-        // dc current line
-        let check = !(ctx.measureText(line).width > config.maxWidth);
-        if (!check) {
-          line = line.split(" ").slice(0, -1).join(" ");
-        }
+      if (afterWord.length !== 0) {
+        words[j] = afterWord;
+        j--;
         lines.push(line);
-        line = check ? "" : words[j] + " ";
-        lineWidth = check ? 0 : currentWidth + spaceWidth;
-      } else {
-        line += " ";
-        lineWidth += spaceWidth;
+        line = "";
+        lineLength = 0;
       }
     }
+    lines.push(line);
     final.push(lines);
   }
 
