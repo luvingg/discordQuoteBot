@@ -157,7 +157,10 @@ client.on("messageCreate", async (message) => {
             .replaceAll(/^-# /gm, "")
             .replaceAll(/\|\|/gm, "")
             .replaceAll(/\`\`\`/gm, "")
+            .replaceAll(/\[/gm, "")
+            .replaceAll(/\]/gm, "")
         ),
+        // messageContent: reply.content,
         avatar: reply.author.displayAvatarURL({
           size: 2048,
           extension: ALLOWED_EXTENSIONS[2],

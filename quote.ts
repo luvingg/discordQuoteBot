@@ -1,5 +1,10 @@
 import Color from "colorjs.io";
-import { Canvas, Image, type CanvasRenderingContext2D } from "skia-canvas";
+import {
+  Canvas,
+  FontLibrary,
+  Image,
+  type CanvasRenderingContext2D,
+} from "skia-canvas";
 import {
   drawLines,
   flattenLines,
@@ -67,7 +72,7 @@ export const DEFAULT_CONFIG: QuoteConfig = {
     username: new Color("#777"),
     watermark: new Color("#777"),
   },
-  fontFamily: "Noto Sans",
+  fontFamily: "Noto Sans, GG, Twemoji, FreeSans, Bitstream Vera Sans Mono",
   fontSize: {
     max: 50,
     min: 20,
@@ -94,8 +99,17 @@ export class QuoteGenerator {
   public static avatarCache: Map<string, Buffer> = new Map();
   public canvas = new Canvas(1920, 1080);
 
+  constructor() {
+    FontLibrary.use("GG", ["fonts/gg.ttf"]);
+    FontLibrary.use("Twemoji", ["fonts/Twemoji.Mozilla.ttf"]);
+  }
+
   public async quote(data: PreQuoteData, config: QuoteConfig): Promise<Buffer> {
     const ctx = this.canvas.getContext("2d");
+
+    config.fontFamily.split(", ").forEach((font) => {
+      console.log(font, FontLibrary.has(font));
+    });
 
     let avatarBuffer: Buffer;
 
