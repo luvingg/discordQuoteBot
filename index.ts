@@ -18,6 +18,7 @@ import {
   type QuoteConfig,
 } from "./quote";
 import Color from "colorjs.io";
+import { stripper } from "./markdownStripper";
 
 declare module "bun" {
   interface Env {
@@ -151,7 +152,12 @@ client.on("messageCreate", async (message) => {
 
     return quoteGenerator.quote(
       {
-        messageContent: removeMarkdown(reply.content),
+        messageContent: stripper(
+          reply.content
+            .replaceAll(/^-# /gm, "")
+            .replaceAll(/\|\|/gm, "")
+            .replaceAll(/\`\`\`/gm, "")
+        ),
         avatar: reply.author.displayAvatarURL({
           size: 2048,
           extension: ALLOWED_EXTENSIONS[2],
@@ -228,7 +234,7 @@ client.on("messageCreate", async (message) => {
     if (i.user.id !== message.author.id) {
       console.log(i.user.id, message.author.id);
       return i.reply({
-        content: `This quote is only editable by its creater, ${message.author.displayName}.`,
+        content: `This quote is only editable by its creator, ${message.author.displayName}.`,
         ephemeral: true,
       });
     }

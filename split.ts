@@ -112,7 +112,7 @@ export const textWrap = (config: TextWrapConfig): string[][] => {
           lineLength + newLength + charLength + hypenWidth >=
           config.maxWidth
         ) {
-          if (currentLength < config.maxWidth / 3) {
+          if (currentLength < config.maxWidth / 2) {
             newWord = "";
             newLength = 0;
             afterWord = currentWord;
