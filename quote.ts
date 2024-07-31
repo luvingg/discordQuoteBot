@@ -107,9 +107,9 @@ export class QuoteGenerator {
   public async quote(data: PreQuoteData, config: QuoteConfig): Promise<Buffer> {
     const ctx = this.canvas.getContext("2d");
 
-    config.fontFamily.split(", ").forEach((font) => {
-      console.log(font, FontLibrary.has(font));
-    });
+    //config.fontFamily.split(", ").forEach((font) => {
+    //  console.log(font, FontLibrary.has(font));
+    //});
 
     let avatarBuffer: Buffer;
 
