@@ -13,9 +13,19 @@
     {
       devShells.${system}.default =
         pkgs.mkShell {
-          buildInputs = [
-            pkgs.hello
+          buildInputs = with pkgs; [
+            libgcc
+            gcc
+            stdenv.cc.cc.lib
+            fontconfig
           ];
+
+          LD_LIBRARY_PATH = "${nixpkgs.lib.makeLibraryPath (with pkgs; [
+            libgcc
+            gcc
+            stdenv.cc.cc.lib
+            fontconfig
+          ])}:$LD_LIBRARY_PATH";
 
           shellHook = "echo Hello World";
         };
