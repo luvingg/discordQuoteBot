@@ -19,5 +19,6 @@
     "mitata": "^0.1.11",
     "skia-canvas": "^1.0.1",
     "strip-markdown": "^6.0.0"
-  }
+  },
+  "trustedDependencies": ["skia-canvas"]
 }
